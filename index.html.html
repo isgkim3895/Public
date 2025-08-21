@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>사즐모 회원 관리 프로그램</title>
+    <!-- Tailwind CSS 로드 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Inter) 로드 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- 아이콘 라이브러리 로드 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* 기본 폰트 설정 */
+        body {
+            font-family: 'Noto Sans KR', 'Inter', sans-serif;
+        }
+        /* 스크롤바 디자인 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* 모달 애니메이션 */
+        .modal-enter {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        .modal-enter-active {
+            opacity: 1;
+            transform: scale(1);
+            transition: all 0.2s ease-out;
+        }
+        .modal-leave-active {
+            opacity: 0;
+            transform: scale(0.95);
+            transition: all 0.2s ease-in;
+        }
+        
+        /* 모바일 화면을 위한 반응형 테이블 스타일 */
+        @media screen and (max-width: 768px) {
+            .responsive-table thead {
+                display: none; /* 모바일에서 테이블 헤더 숨기기 */
+            }
+            .responsive-table tr {
+                display: block;
+                margin-bottom: 1rem;
+                border: 1px solid #ddd;
+                border-radius: 0.5rem;
+                padding: 1rem;
+                background-color: #fff;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            }
+            .responsive-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.5rem 0;
+                border-bottom: 1px solid #eee;
+            }
+            .responsive-table td:last-child {
+                border-bottom: none;
+            }
+            .responsive-table td::before {
+                content: attr(data-label); /* data-label 속성값으로 라벨 생성 */
+                font-weight: 600;
+                margin-right: 1rem;
+                text-align: left;
+            }
+            .responsive-table td.actions {
+                justify-content: flex-end; /* 관리 버튼을 오른쪽으로 정렬 */
+            }
+             .responsive-table td.actions::before {
+                content: ""; /* 관리 라벨은 숨김 */
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="app" class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <!-- 헤더 -->
+        <header class="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <h1 class="text-3xl font-bold text-gray-800">🕺💃 사즐모 회원 관리</h1>
+            <div class="w-full sm:w-auto flex items-center space-x-2">
+                <div class="relative flex-grow">
+                    <input type="text" id="searchInput" placeholder="닉네임 검색..." class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i data-lucide="search" class="w-5 h-5 text-gray-400"></i>
+                    </div>
+                </div>
+                <button id="addMemberBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition duration-200 flex items-center space-x-2 flex-shrink-0">
+                    <i data-lucide="user-plus" class="w-5 h-5"></i>
+                    <span class="hidden sm:inline">신규 등록</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- 회원 목록 테이블 -->
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 responsive-table">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">번호</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">닉네임</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">모임명</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">직책</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">성별</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">명찰</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
+                    </tr>
+                </thead>
+                <tbody id="memberList" class="bg-white divide-y divide-gray-200 md:divide-y-0">
+                    <!-- 데이터가 여기에 동적으로 삽입됩니다. -->
+                    <tr><td colspan="7" class="text-center py-10 text-gray-500">회원 정보를 불러오는 중입니다...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="totalMemberCount" class="mt-4 text-right text-sm text-gray-600 font-medium"></div>
+    </div>
+
+    <!-- 회원 등록/수정 모달 -->
+    <div id="memberModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div id="modalContent" class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto modal-enter">
+            <form id="memberForm" class="p-6">
+                <h2 id="modalTitle" class="text-2xl font-bold mb-6">신규 회원 등록</h2>
+                <input type="hidden" id="memberId">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="nickname" class="block text-sm font-medium text-gray-700">닉네임</label>
+                        <input type="text" id="nickname" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label for="gender" class="block text-sm font-medium text-gray-700">성별</label>
+                        <select id="gender" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <option value="신사">신사</option>
+                            <option value="숙녀">숙녀</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="meetingName" class="block text-sm font-medium text-gray-700">모임명</label>
+                        <select id="meetingName" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required></select>
+                    </div>
+                    <div>
+                        <label for="position" class="block text-sm font-medium text-gray-700">직책</label>
+                        <select id="position" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required></select>
+                    </div>
+                    <div>
+                        <label for="nameTag" class="block text-sm font-medium text-gray-700">명찰</label>
+                        <select id="nameTag" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></select>
+                    </div>
+                    <div>
+                        <label for="nameTagColor" class="block text-sm font-medium text-gray-700">명찰색</label>
+                        <select id="nameTagColor" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="exemption" class="block text-sm font-medium text-gray-700">회비 면제</label>
+                        <select id="exemption" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">해당 없음</option>
+                            <option value="면제">면제</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="notes" class="block text-sm font-medium text-gray-700">비고</label>
+                        <textarea id="notes" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" id="cancelBtn" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition">취소</button>
+                    <button type="submit" id="saveBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition">저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase SDK 로드 -->
+    <script type="module">
+        // Firebase v11.6.1 SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, addDoc, setDoc, deleteDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // --- 설정 ---
+        // 이 부분은 공개된 정보이므로 앱 코드에 포함해도 안전합니다.
+        const firebaseConfig = {
+            apiKey: "AIzaSyA7e79DgiDuvjGQCQgZNm-WAijLsxtAgFM",
+            authDomain: "sajeulmo-app.firebaseapp.com",
+            projectId: "sajeulmo-app",
+            storageBucket: "sajeulmo-app.firebasestorage.app",
+            messagingSenderId: "1092211749893",
+            appId: "1:1092211749893:web:cb6884f7f1cf93b27d986c",
+            measurementId: "G-SZTQ83RM3B"
+        };
+
+        // --- 데이터 코드 정의 ---
+        const DATA_CODES = {
+            meeting: {
+                '111': '중앙', '112': '리듬댄스', '113': '정통사교', '114': '댄스스포츠', '115': '일산', '116': '수원', '117': '인천', '118': '동부', '119': '서부', '120': '남부', '121': '북부', '122': '등산', '123': '음방', '124': '온라인',
+                '211': '대전', '212': '충남', '213': '대구', '214': '경북', '215': '포항', '216': '부산', '217': '제주', '218': '전북', '219': '전남', '220': '경남', '221': '울산', '222': '강원', '223': '충북'
+            },
+            position: {
+                '11': '총회장', '12': '상임고문', '13': '부회장', '14': '웹마스터', '15': '고문', '16': '자문', '17': '회장', '18': '지역회장', '19': '총무', '20': '부지회장', '21': '대장', '22': '부대장', '23': '국장', '24': 'CJ', '25': '게시판지기', '26': '공식사부'
+            },
+            nameTag: { '1': '임원', '2': '운영진', '3': '종이', '4': '만들대상' },
+            nameTagColor: { '16': '코스모스색', '23': '노랑색', '25': '연두색', '26': '초록색', '44': '바다색', '45': '파랑색' }
+        };
+
+        // --- Firebase 초기화 ---
+        let db, auth;
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        } catch (e) {
+            console.error("Firebase 초기화 오류:", e);
+            document.getElementById('memberList').innerHTML = '<tr><td colspan="7" class="text-center py-10 text-red-500">Firebase 설정 오류. 콘솔(F12)을 확인하세요.</td></tr>';
+            if (e.message.includes("Invalid Firebase configuration")) {
+                 alert("Firebase 설정이 올바르지 않습니다. 코드의 firebaseConfig 변수에 실제 프로젝트 정보를 입력해주세요.");
+            }
+        }
+        
+        // --- 전역 변수 ---
+        const membersCollection = collection(db, "sajeulmo_members");
+        let allMembers = []; // 전체 회원 데이터 캐시
+
+        // --- 핵심 로직 ---
+
+        // '소개대상' 코드 계산 함수
+        function calculateIntroductionTarget(meetingCode, positionCode) {
+            if (meetingCode === '111' && positionCode === '11') return '1'; // 총회장
+            if (meetingCode === '111' && positionCode === '12') return '2'; // 중앙 상임고문
+            if (meetingCode === '111' && positionCode === '15') return '3'; // 중앙고문
+            if (meetingCode === '111' && positionCode === '13') return '4'; // 중앙 부회장
+            if (meetingCode === '111' && positionCode === '16') return '5'; // 중앙 자문위원
+            if (meetingCode !== '111' && (positionCode === '15' || positionCode === '16')) return '6'; // 지역자문고문
+            if (meetingCode === '111' && positionCode === '14') return '7'; // 중앙웹마스터
+            if (['17', '18', '19', '21', '23'].includes(positionCode)) return '8'; // 지역회장 총무
+            if (['24', '25'].includes(positionCode)) return '9'; // 게시판지기 방송국CJ
+            if (positionCode === '26') return '10'; // 공식사부
+            return ''; // 해당 없음
+        }
+
+        // 회원 목록 렌더링 함수
+        function renderMemberList(members) {
+            const memberListEl = document.getElementById('memberList');
+            const totalCountEl = document.getElementById('totalMemberCount');
+            
+            if (members.length === 0) {
+                // 모바일에서는 tbody를 비우고, 데스크탑에서는 안내 메시지 표시
+                memberListEl.innerHTML = '<tr class="hidden md:table-row"><td colspan="7" class="text-center py-10 text-gray-500">등록된 회원이 없습니다.</td></tr>';
+                if (window.innerWidth < 768) {
+                     memberListEl.innerHTML = '<div class="text-center py-10 text-gray-500">등록된 회원이 없습니다.</div>';
+                }
+                totalCountEl.textContent = '총 0명';
+                return;
+            }
+
+            memberListEl.innerHTML = members.map(member => `
+                <tr id="member-row-${member.id}" class="hover:bg-gray-50 transition-colors duration-150">
+                    <td data-label="번호" class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${member.userNo}</td>
+                    <td data-label="닉네임" class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-blue-600">${member.nickname}</td>
+                    <td data-label="모임명" class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${DATA_CODES.meeting[member.meetingName] || '알 수 없음'}</td>
+                    <td data-label="직책" class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${DATA_CODES.position[member.position] || '알 수 없음'}</td>
+                    <td data-label="성별" class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${member.gender}</td>
+                    <td data-label="명찰" class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style="background-color: ${getBgColor(member.nameTagColor)}; color: ${getTextColor(member.nameTagColor)};">
+                          ${DATA_CODES.nameTag[member.nameTag] || ''}
+                        </span>
+                    </td>
+                    <td data-label="관리" class="px-4 py-3 whitespace-nowrap text-sm font-medium actions">
+                        <button class="edit-btn text-indigo-600 hover:text-indigo-900" data-id="${member.id}">수정</button>
+                        <button class="delete-btn text-red-600 hover:text-red-900 ml-4" data-id="${member.id}">삭제</button>
+                    </td>
+                </tr>
+            `).join('');
+
+            totalCountEl.textContent = `총 ${members.length}명`;
+        }
+
+        // 명찰색에 따른 배경/텍스트 색상 반환 함수
+        function getBgColor(colorCode) {
+            const colors = { '16': '#F7CAC9', '23': '#FDFD96', '25': '#B2E2B2', '26': '#98FB98', '44': '#A2D2FF', '45': '#BDE0FE' };
+            return colors[colorCode] || '#E5E7EB';
+        }
+        function getTextColor(colorCode) {
+            const colors = { '16': '#7C2D12', '23': '#854D0E', '25': '#14532D', '26': '#14532D', '44': '#1E3A8A', '45': '#1E40AF' };
+            return colors[colorCode] || '#374151';
+        }
+
+        // 모달 열기/닫기
+        const memberModal = document.getElementById('memberModal');
+        const modalContent = document.getElementById('modalContent');
+        
+        function openModal() {
+            memberModal.classList.remove('hidden');
+            setTimeout(() => modalContent.classList.add('modal-enter-active'), 10);
+        }
+
+        function closeModal() {
+            modalContent.classList.remove('modal-enter-active');
+            modalContent.classList.add('modal-leave-active');
+            setTimeout(() => {
+                memberModal.classList.add('hidden');
+                modalContent.classList.remove('modal-leave-active');
+            }, 200);
+        }
+
+        // 폼 초기화 및 옵션 채우기
+        function setupForm() {
+            const meetingSelect = document.getElementById('meetingName');
+            const positionSelect = document.getElementById('position');
+            const nameTagSelect = document.getElementById('nameTag');
+            const nameTagColorSelect = document.getElementById('nameTagColor');
+
+            const createOptions = (selectEl, data) => {
+                selectEl.innerHTML = Object.entries(data).map(([code, name]) => `<option value="${code}">${name}</option>`).join('');
+            };
+
+            createOptions(meetingSelect, DATA_CODES.meeting);
+            createOptions(positionSelect, DATA_CODES.position);
+            createOptions(nameTagSelect, DATA_CODES.nameTag);
+            createOptions(nameTagColorSelect, DATA_CODES.nameTagColor);
+        }
+
+        // 다음 회원번호 가져오기
+        async function getNextUserNo() {
+            const q = query(membersCollection, orderBy("userNo", "desc"), limit(1));
+            const querySnapshot = await getDocs(q);
+            if (querySnapshot.empty) {
+                return 1;
+            }
+            const lastMember = querySnapshot.docs[0].data();
+            return (lastMember.userNo || 0) + 1;
+        }
+
+        // --- 이벤트 리스너 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            setupForm();
+
+            onAuthStateChanged(auth, user => {
+                if (user) {
+                    // 실시간 데이터 감지
+                    onSnapshot(query(membersCollection, orderBy("userNo", "asc")), (snapshot) => {
+                        allMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        renderMemberList(allMembers);
+                    });
+                } else {
+                    signInAnonymously(auth).catch(error => {
+                        console.error("익명 로그인 실패:", error);
+                        // 사용자가 가장 흔하게 겪는 설정 오류에 대한 구체적인 안내 추가
+                        if (error.code === 'auth/configuration-not-found') {
+                            alert("Firebase 익명 로그인 설정이 필요합니다.\n\n[해결 방법]\n1. Firebase 콘솔에서 'Authentication'으로 이동하세요.\n2. 'Sign-in method' 탭을 선택하세요.\n3. '익명'을 찾아 활성화하고 저장하세요.\n\n설정 후 페이지를 새로고침해주세요.");
+                            document.getElementById('memberList').innerHTML = '<tr><td colspan="7" class="text-center py-10 text-red-500">Firebase 익명 로그인이 활성화되지 않았습니다.<br>안내에 따라 설정을 완료한 후 페이지를 새로고침하세요.</td></tr>';
+                        }
+                    });
+                }
+            });
+
+            // 신규 등록 버튼
+            document.getElementById('addMemberBtn').addEventListener('click', () => {
+                document.getElementById('memberForm').reset();
+                document.getElementById('modalTitle').textContent = '신규 회원 등록';
+                document.getElementById('memberId').value = '';
+                openModal();
+            });
+
+            // 모달 닫기 버튼
+            document.getElementById('cancelBtn').addEventListener('click', closeModal);
+            memberModal.addEventListener('click', (e) => {
+                if (e.target === memberModal) closeModal();
+            });
+
+            // 폼 제출 (저장)
+            document.getElementById('memberForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const id = document.getElementById('memberId').value;
+
+                const meetingCode = document.getElementById('meetingName').value;
+                const positionCode = document.getElementById('position').value;
+                
+                const memberData = {
+                    nickname: document.getElementById('nickname').value,
+                    gender: document.getElementById('gender').value,
+                    meetingName: meetingCode,
+                    position: positionCode,
+                    nameTag: document.getElementById('nameTag').value,
+                    nameTagColor: document.getElementById('nameTagColor').value,
+                    exemption: document.getElementById('exemption').value,
+                    notes: document.getElementById('notes').value,
+                    introductionTarget: calculateIntroductionTarget(meetingCode, positionCode)
+                };
+
+                try {
+                    if (id) { // 수정
+                        const memberRef = doc(db, "sajeulmo_members", id);
+                        await setDoc(memberRef, memberData, { merge: true });
+                        alert('회원 정보가 성공적으로 수정되었습니다.');
+                    } else { // 신규 등록
+                        memberData.userNo = await getNextUserNo();
+                        await addDoc(membersCollection, memberData);
+                        alert('신규 회원이 성공적으로 등록되었습니다.');
+                    }
+                    closeModal();
+                } catch (error) {
+                    console.error("데이터 저장 오류:", error);
+                    alert('오류가 발생했습니다. 다시 시도해주세요.');
+                }
+            });
+
+            // 수정 및 삭제 버튼 (이벤트 위임)
+            document.getElementById('memberList').addEventListener('click', async (e) => {
+                const target = e.target;
+                const id = target.dataset.id;
+
+                if (target.classList.contains('edit-btn')) {
+                    const member = allMembers.find(m => m.id === id);
+                    if (member) {
+                        document.getElementById('modalTitle').textContent = '회원 정보 수정';
+                        document.getElementById('memberId').value = member.id;
+                        document.getElementById('nickname').value = member.nickname;
+                        document.getElementById('gender').value = member.gender;
+                        document.getElementById('meetingName').value = member.meetingName;
+                        document.getElementById('position').value = member.position;
+                        document.getElementById('nameTag').value = member.nameTag;
+                        document.getElementById('nameTagColor').value = member.nameTagColor;
+                        document.getElementById('exemption').value = member.exemption;
+                        document.getElementById('notes').value = member.notes;
+                        openModal();
+                    }
+                }
+
+                if (target.classList.contains('delete-btn')) {
+                    const member = allMembers.find(m => m.id === id);
+                    if (confirm(`'${member.nickname}' 회원을 정말로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+                        try {
+                            await deleteDoc(doc(db, "sajeulmo_members", id));
+                            alert('회원이 삭제되었습니다.');
+                        } catch (error) {
+                            console.error("삭제 오류:", error);
+                            alert('삭제 중 오류가 발생했습니다.');
+                        }
+                    }
+                }
+            });
+            
+            // 검색 기능
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const filteredMembers = allMembers.filter(member => 
+                    member.nickname.toLowerCase().includes(searchTerm)
+                );
+                renderMemberList(filteredMembers);
+            });
+        });
+    </script>
+</body>
+</html>
